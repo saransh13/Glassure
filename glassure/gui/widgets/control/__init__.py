@@ -10,3 +10,4 @@ from .diamond import DiamondWidget
 from .configuration import ConfigurationWidget
 from .soller import SollerWidget
 from .transfer import TransferFunctionWidget
+from .pinkbeam import PinkBeamWidget

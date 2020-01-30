@@ -8,7 +8,7 @@ from ...core import __version__
 from ..qt import QtGui, QtWidgets, QtCore
 
 from .control import CompositionWidget, DataWidget, OptimizationWidget, OptionsWidget, DensityOptimizationWidget, \
-    ExtrapolationWidget, DiamondWidget, ConfigurationWidget, SollerWidget, TransferFunctionWidget
+    ExtrapolationWidget, DiamondWidget, ConfigurationWidget, SollerWidget, TransferFunctionWidget, PinkBeamWidget
 from .custom import PatternWidget
 
 from .custom import ExpandableBox
@@ -101,6 +101,9 @@ class GlassureWidget(QtWidgets.QWidget):
         self.transfer_widget = self.right_control_widget.transfer_widget
         self.transfer_active_cb = self.right_control_widget.transfer_widget.activate_cb
 
+        self.pinkbeam_widget = self.right_control_widget.pinkbeam_widget
+        self.pinkbeam_active_cb = self.right_control_widget.pinkbeam_widget.activate_cb
+
     def create_function_shortcuts(self):
         self.set_composition = self.left_control_widget.composition_widget.set_composition
         self.get_composition = self.left_control_widget.composition_widget.get_composition
@@ -170,6 +173,7 @@ class RightControlWidget(QtWidgets.QWidget):
         self.diamond_widget = DiamondWidget()
         self.soller_widget = SollerWidget()
         self.transfer_widget = TransferFunctionWidget()
+        self.pinkbeam_widget = PinkBeamWidget()
 
         self.vertical_layout.addWidget(ExpandableBox(self.configuration_widget, "Configurations"))
         self.vertical_layout.addWidget(ExpandableBox(self.optimization_widget, "Optimization"))
@@ -177,6 +181,7 @@ class RightControlWidget(QtWidgets.QWidget):
         self.vertical_layout.addWidget(ExpandableBox(self.diamond_widget, "Diamond Correction", True))
         self.vertical_layout.addWidget(ExpandableBox(self.soller_widget, "Soller Slit Correction", True))
         self.vertical_layout.addWidget(ExpandableBox(self.transfer_widget, "Transfer Function Correction", True))
+        self.vertical_layout.addWidget(ExpandableBox(self.pinkbeam_widget, "Pink Beam Correction", True))
 
         self.vertical_layout.addSpacerItem(QtWidgets.QSpacerItem(20, 50, QtWidgets.QSizePolicy.Fixed,
                                                                  QtWidgets.QSizePolicy.MinimumExpanding))
