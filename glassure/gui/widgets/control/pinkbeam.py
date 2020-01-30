@@ -19,14 +19,17 @@ class PinkBeamWidget(QtWidgets.QWidget):
         self.activate_cb.setChecked(False)
 
     def create_widgets(self):
-        self.load_xray_spectrum = QtWidgets.QPushButton("Load xray Spectrum")
+        self.load_xray_spectrum = QtWidgets.QPushButton("Load spectrum")
+        self.spectrum_filename_lbl = LabelAlignRight("")
 
     def create_layout(self):
 
         self.pinkbeam_layout = QtWidgets.QHBoxLayout()
+        self.pinkbeam_layout.setContentsMargins(0, 0, 0, 0)
         self.activate_cb = QtWidgets.QCheckBox("activate")
         self.pinkbeam_layout.addWidget(self.activate_cb)
         self.pinkbeam_layout.addWidget(self.load_xray_spectrum)
+        self.pinkbeam_layout.addWidget(self.spectrum_filename_lbl)
 
         self.setLayout(self.pinkbeam_layout)
 

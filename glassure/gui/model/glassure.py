@@ -640,3 +640,11 @@ class GlassureModel(QtCore.QObject):
 
     def load_transfer_sample_bkg_pattern(self, filename):
         self.transfer_sample_bkg_pattern = Pattern.from_file(filename)
+
+    ''' 
+        pink beam correction controls
+        added by Saransh Singh 01/30/2020
+        Lawrence Livermore national Lab
+    '''
+    def load_pinkbeam_spectrum(self, filename):
+        self.pinkbeam_spectrum = Pattern.from_file(filename)

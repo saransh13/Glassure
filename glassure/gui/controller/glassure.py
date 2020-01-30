@@ -90,6 +90,14 @@ class GlassureController(object):
         self.main_widget.save_sq_btn.clicked.connect(self.save_sq_btn_clicked)
         self.main_widget.save_gr_btn.clicked.connect(self.save_gr_btn_clicked)
 
+        ''' 
+            pink beam correction controls
+            added by Saransh Singh 01/30/2020
+            Lawrence Livermore national Lab
+        '''
+        self.main_widget.right_control_widget.pinkbeam_widget.load_xray_spectrum.clicked.connect(
+        self.load_pinkbeam_spectrum)
+
     def load_data(self):
         filename = open_file_dialog(self.main_widget, caption="Load Pattern",
                                     directory=self.settings.value('working_directory'))
@@ -231,3 +239,13 @@ class GlassureController(object):
         if filename is not '':
             self.model.gr_pattern.save(filename)
             self.settings.setValue('gr_directory', os.path.dirname(filename))
+
+    def load_pinkbeam_spectrum(self):
+        filename = open_file_dialog(self.main_widget, caption="Load Pattern",
+                                    directory=self.settings.value('working_directory'))
+
+        if filename is not '':
+            self.model.load_pinkbeam_spectrum(filename)
+            self.settings.setValue('working_directory', os.path.dirname(filename))
+            self.main_widget.right_control_widget.pinkbeam_widget.spectrum_filename_lbl.setText(
+                os.path.basename(filename))
