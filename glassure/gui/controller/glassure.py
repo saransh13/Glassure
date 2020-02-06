@@ -126,7 +126,7 @@ class GlassureController(object):
         if self.model.sq_pattern is not None:
             self.main_widget.pattern_widget.set_sq_pattern(self.model.sq_pattern, self.model.configuration_ind)
         if self.model.gr_pattern is not None:
-            self.main_widget.pattern_widget.set_gr_pattern(self.model.gr_pattern, self.model.configuration_ind)
+            self.main_widget.pattern_widget.set_gr_pattern(self.model.gr_pattern, self.model.configuration_ind)            
 
         self.main_widget.left_control_widget.composition_widget.density_atomic_units_lbl. \
             setText("{:.4f}".format(self.model.atomic_density))
@@ -249,3 +249,5 @@ class GlassureController(object):
             self.settings.setValue('working_directory', os.path.dirname(filename))
             self.main_widget.right_control_widget.pinkbeam_widget.spectrum_filename_lbl.setText(
                 os.path.basename(filename))
+            self.main_widget.right_control_widget.pinkbeam_widget.spec_widget.setVisible(True)
+            self.main_widget.right_control_widget.pinkbeam_widget.plot_spec(self.model.pinkbeam_spectrum)

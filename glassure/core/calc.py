@@ -112,8 +112,9 @@ def fit_normalization_factor(sample_pattern, composition, q_cutoff=3, method="sq
     return out.params['n'].value
 
 
-def calculate_sq_raw(sample_pattern, f_squared_mean, f_mean_squared, incoherent_scattering=None, normalization_factor=1,
-                     method='FZ'):
+def calculate_sq_raw(sample_pattern, f_squared_mean, f_mean_squared, 
+                    incoherent_scattering=None, normalization_factor=1, 
+                    method='FZ'):
     """
     Calculates the structure factor of a material with the given parameters. Using the equation:
 
@@ -129,7 +130,6 @@ def calculate_sq_raw(sample_pattern, f_squared_mean, f_mean_squared, incoherent_
     :param method:                describing the method to calculate the structure factor, possible values are
                                     - 'AL' - Ashcroft-Langreth
                                     - 'FZ' - Faber-Ziman
-
     :return: S(Q) pattern
     """
     q, intensity = sample_pattern.data
@@ -332,3 +332,125 @@ def calculate_gr(fr_pattern, density, composition):
     :return: g(r) pattern
     """
     return calculate_gr_raw(fr_pattern, convert_density_to_atoms_per_cubic_angstrom(composition, density))
+
+def calc_df_dE(composition, theta, E):
+    """
+    =======================================================================
+    >> @DATE:   02/06/2020  SS 1.0 original
+    >> @AUTHOR: Saransh Singh Lawrence Livermore national Lab
+    >> @DETAIL: calculates derivative of the form factor with energy
+
+    >> @param   composition
+    >> @param   theta scattering anle
+    >> @param   E assumed energy of xray beam
+
+    >> @return  theta array which converts q to scattering angle
+    =======================================================================
+    """
+    pass
+
+def calc_dIcoh_dE(composition, Fr, theta):
+    """
+    =======================================================================
+    >> @DATE:   02/06/2020  SS 1.0 original
+    >> @AUTHOR: Saransh Singh Lawrence Livermore national Lab
+    >> @DETAIL: calculates derivative of the coherent intensity with energy
+
+    >> @param   composition
+    >> @param   Fr = 4 * pi * r * (rho - rho_0)
+
+    >> @return  theta array which converts q to scattering angle
+    =======================================================================
+    """
+    pass
+
+def calc_theta_from_q(q, E):
+    """
+    =======================================================================
+    >> @DATE:   02/06/2020  SS 1.0 original
+    >> @AUTHOR: Saransh Singh Lawrence Livermore national Lab
+    >> @DETAIL: converts q to theta given an energy
+
+    >> @param   q scattering parameter = 4 * pi * sin(theta) / lambda
+    >> @param   E  assumed energy of xray beam in keV
+
+    >> @return  theta array which converts q to scattering angle
+    =======================================================================
+    """
+    pass
+
+def calc_q_from_theta(theta, E):
+    """
+    =======================================================================
+    >> @DATE:   02/06/2020  SS 1.0 original
+    >> @AUTHOR: Saransh Singh Lawrence Livermore national Lab
+    >> @DETAIL: converts q to theta given an energy
+
+    >> @param   theta scattering angle
+    >> @param   E  assumed energy of xray beam in keV
+
+    >> @return  q array which converts scattering angle to scattering 
+                parameter q
+    =======================================================================
+    """
+    pass
+
+def calc_weighted_delE(pinkbeam_spectrum):
+    """
+    =======================================================================
+    >> @DATE:   02/06/2020  SS 1.0 original
+    >> @AUTHOR: Saransh Singh Lawrence Livermore national Lab
+    >> @DETAIL: calculates the weighted mean of the deviation from peak energy
+                delE = sum [ w(E) * (E - Emax) ] such that sum [ w(E) ] = 1.0
+
+    >> @param   pinkbeam_spec, pectrum of pink beam if beam is not mono
+
+    >> @return  delE weighted mean of the deviation from peak energy
+    >> @return  Emax maximum energy in the spectrum
+    =======================================================================
+    """
+    pass
+
+def calc_dsincx_dx(r, q):
+    """
+    =======================================================================
+    >> @DATE:   02/06/2020  SS 1.0 original
+    >> @AUTHOR: Saransh Singh Lawrence Livermore national Lab
+    >> @DETAIL: this function evaluates the derivative of the sinc function
+                encodes analytical result
+
+    >> @param   r distance in real space
+    >> @param   q distance in reciprocal space 
+
+    >> @return  d(sinc(r*q)) / dq
+    =======================================================================
+    """
+    eps = 1e-8
+    if(np.abs(r) < eps):
+        return 0.0
+
+    if(np.abs(q) < eps):
+        return 0.0
+
+    x = q * r
+    return ( x * np.cos(x) - np.sin(x) ) / (q * x)
+
+
+def calc_pbcorrection(sample_pattern, pinkbeam_spectrum, composition):
+    """
+    =======================================================================
+    >> @DATE:   02/06/2020  SS 1.0 original
+    >> @AUTHOR: Saransh Singh Lawrence Livermore national Lab
+    >> @DETAIL: calcultes the correction due to pink beam, given the spectrum 
+                of the incident beam. effectively transforms the coherent 
+                intensity to an "equivalent" monochromatic intensity for the 
+                peak energy in the spectrum
+
+    >> @param   sample_pattern experimentally measured spectra
+    >> @param   pinkbeam_spec, pectrum of pink beam if beam is not mono
+    >> @param   composition
+
+    >> @return  sample_pattern (input) is updated with corrected data
+    =======================================================================
+    """
+    pass

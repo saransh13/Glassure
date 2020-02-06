@@ -7,7 +7,7 @@ from ..qt import QtGui, QtCore, Signal
 from ...core.pattern import Pattern
 from .density_optimization import DensityOptimizer
 from ...core.utility import calculate_incoherent_scattering, convert_density_to_atoms_per_cubic_angstrom
-from ...core import calculate_sq, calculate_gr, calculate_fr
+from ...core import calculate_sq, calculate_gr, calculate_fr, calc_pbcorrection
 from ...core.optimization import optimize_sq
 from ...core.soller_correction import SollerCorrectionGui
 from ...core.transfer_function import calculate_transfer_function
@@ -440,7 +440,11 @@ class GlassureModel(QtCore.QObject):
                                               attenuation_factor=self.optimization_attenuation,
                                               fcn_callback=self.optimization_callback)
             self.calculate_fr()
+            
+            self.apply_pinkbeam_correction()
+
             self.calculate_gr()
+
         self.data_changed.emit()
 
     def calculate_sq(self):
@@ -479,6 +483,9 @@ class GlassureModel(QtCore.QObject):
 
             sample_pattern = Pattern(q, self.soller_correction.transfer_function_sample(
                 self.soller_parameters['sample_thickness']) * intensity)
+
+        if self.use_pinkbeam_correction and self.pinkbeam_spectrum is not None:
+            self.apply_pinkbeam_correction(sample_pattern)
 
         self.sq_pattern = calculate_sq(sample_pattern,
                                        density=self.density,
@@ -641,10 +648,22 @@ class GlassureModel(QtCore.QObject):
     def load_transfer_sample_bkg_pattern(self, filename):
         self.transfer_sample_bkg_pattern = Pattern.from_file(filename)
 
-    ''' 
-        pink beam correction controls
-        added by Saransh Singh 01/30/2020
-        Lawrence Livermore national Lab
+    '''          
+    =======================================================================
+    >> @DATE:   02/06/2020
+    >> @AUTHOR: Saransh Singh (SS) Lawrence Livermore national Lab
+    >> @DETAIL: we will insert the pink beam correction at this step.
+                the optimized s(q) and therefore F(r) will be used to
+                calculate the correction and propagate the changes to 
+                the original s(q)
+    >> @param   pinkbeam_spec, pectrum of pink beam if beam is not mono
+    =======================================================================
     '''
     def load_pinkbeam_spectrum(self, filename):
         self.pinkbeam_spectrum = Pattern.from_file(filename)
+        self.use_pinkbeam_correction = True
+
+    def apply_pinkbeam_correction(self, sample_pattern):
+        calc_pbcorrection(sample_pattern, 
+                     self.pinkbeam_spectrum, 
+                     self.composition)
