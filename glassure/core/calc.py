@@ -518,7 +518,7 @@ def calc_dsincqr_dq(r, q):
     =======================================================================
     """
     eps = 1e-8
-    if(np.abs(r) < eps):
+    if(np.abs(q) < eps):
         return 0.0
 
     if(np.abs(q) < eps):
