@@ -7,7 +7,8 @@ from ..qt import QtGui, QtCore, Signal
 from ...core.pattern import Pattern
 from .density_optimization import DensityOptimizer
 from ...core.utility import calculate_incoherent_scattering, convert_density_to_atoms_per_cubic_angstrom
-from ...core import calculate_sq, calculate_gr, calculate_fr, calc_pbcorrection
+from ...core import calculate_sq, calculate_gr, calculate_fr
+from ...core.calc import calc_pbcorrection
 from ...core.optimization import optimize_sq
 from ...core.soller_correction import SollerCorrectionGui
 from ...core.transfer_function import calculate_transfer_function
@@ -314,6 +315,15 @@ class GlassureModel(QtCore.QObject):
             self.calculate_transforms()
 
     @property
+    def use_pinkbeam_correction(self):
+        return self.current_configuration.use_pinkbeam_correction
+
+    @use_pinkbeam_correction.setter
+    def use_pinkbeam_correction(self, new_value):
+        self.current_configuration.use_pinkbeam_correction = new_value
+        self.calculate_transforms()
+
+    @property
     def transfer_function(self):
         return self.current_configuration.transfer_function
 
@@ -440,8 +450,6 @@ class GlassureModel(QtCore.QObject):
                                               attenuation_factor=self.optimization_attenuation,
                                               fcn_callback=self.optimization_callback)
             self.calculate_fr()
-            
-            self.apply_pinkbeam_correction()
 
             self.calculate_gr()
 

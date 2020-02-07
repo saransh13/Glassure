@@ -71,6 +71,9 @@ class GlassureConfiguration(object):
         self.transfer_sample_bkg_pattern = None
         self.transfer_sample_bkg_scaling = 1
 
+        # pinkbeam correction
+        self.use_pinkbeam_correction = False
+
         self.name = 'Config {}'.format(GlassureConfiguration.num)
         self.color = calculate_color(GlassureConfiguration.num)
         GlassureConfiguration.num += 1
