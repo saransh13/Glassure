@@ -2,10 +2,16 @@
 
 import numpy as np
 import lmfit
+from scipy.integrate import simps
 
 from . import Pattern
-from .utility import calculate_incoherent_scattering, calculate_f_squared_mean, calculate_f_mean_squared, \
-    convert_density_to_atoms_per_cubic_angstrom
+from .utility import calculate_incoherent_scattering, calculate_f_squared_mean, \
+                     calculate_f_mean_squared, convert_density_to_atoms_per_cubic_angstrom,\
+                     normalize_composition
+
+from .scattering_factors import calculate_coherent_scattering_factor_derivative, \
+                                calculate_coherent_scattering_factor, \
+                                get_atomic_number
 
 __all__ = ['calculate_normalization_factor_raw', 'calculate_normalization_factor', 'fit_normalization_factor',
            'calculate_sq', 'calculate_sq_raw', 'calculate_sq_from_fr', 'calculate_sq_from_gr',
@@ -333,6 +339,14 @@ def calculate_gr(fr_pattern, density, composition):
     """
     return calculate_gr_raw(fr_pattern, convert_density_to_atoms_per_cubic_angstrom(composition, density))
 
+def calc_Z_total(composition):
+    norm_elemental_abundances = normalize_composition(composition)
+
+    res = 0
+    for key, value in norm_elemental_abundances.items():
+        res += value * get_atomic_number(key)
+    return res
+
 def calc_df_dE(composition, theta, E):
     """
     =======================================================================
@@ -347,22 +361,57 @@ def calc_df_dE(composition, theta, E):
     >> @return  theta array which converts q to scattering angle
     =======================================================================
     """
-    pass
+    norm_elemental_abundances = normalize_composition(composition)
 
-def calc_dIcoh_dE(composition, Fr, theta):
+    # plancks constant times speed of light in kev A
+    q   = calc_q_from_theta(theta, E)
+    res = 0
+    for key, value in norm_elemental_abundances.items():
+        res += value * calculate_coherent_scattering_factor_derivative(key, q, E)
+    return res
+
+def calc_sum_of_product_scattering_factors_derivatives(composition, q):
     """
     =======================================================================
-    >> @DATE:   02/06/2020  SS 1.0 original
+    >> @DATE:   02/07/2020  SS 1.0 original
     >> @AUTHOR: Saransh Singh Lawrence Livermore national Lab
-    >> @DETAIL: calculates derivative of the coherent intensity with energy
+    >> @DETAIL: calculates sum of product for form factors and derivative
+                i.e. sum (f_p * df_p / dq)
 
     >> @param   composition
-    >> @param   Fr = 4 * pi * r * (rho - rho_0)
+    >> @param   q scattering parameter
 
-    >> @return  theta array which converts q to scattering angle
+    >> @return  sum (f_p * df_p / dq)
     =======================================================================
     """
-    pass
+    norm_elemental_abundances = normalize_composition(composition)
+    res = 0
+    for key, value in norm_elemental_abundances.items():
+        res += value * calculate_coherent_scattering_factor_derivative(key, q) * \
+               calculate_coherent_scattering_factor(key, q)
+    return res
+
+def calc_product_of_sum_scattering_factors_derivatives(composition, q):
+    """
+    =======================================================================
+    >> @DATE:   02/07/2020  SS 1.0 original
+    >> @AUTHOR: Saransh Singh Lawrence Livermore national Lab
+    >> @DETAIL: calculates product of sums for form factors and derivative
+                i.e. sum (f_p) * sum (df_p / dq)
+
+    >> @param   composition
+    >> @param   q scattering parameter
+
+    >> @return  sum (f_p) * sum (df_p / dq)
+    =======================================================================
+    """
+    norm_elemental_abundances = normalize_composition(composition)
+    res_f  = 0
+    res_df = 0
+    for key, value in norm_elemental_abundances.items():
+        res_df += calculate_coherent_scattering_factor_derivative(key, q) 
+        res_f  += value * calculate_coherent_scattering_factor(key, q)
+    return res_f * res_df
 
 def calc_theta_from_q(q, E):
     """
@@ -371,13 +420,16 @@ def calc_theta_from_q(q, E):
     >> @AUTHOR: Saransh Singh Lawrence Livermore national Lab
     >> @DETAIL: converts q to theta given an energy
 
-    >> @param   q scattering parameter = 4 * pi * sin(theta) / lambda
+    >> @param   q scattering parameter = 4 * pi * sin(theta) / lambda (in A^-1)
     >> @param   E  assumed energy of xray beam in keV
 
     >> @return  theta array which converts q to scattering angle
+                (could have NaNs if the scattering parameter is not allowed!)
     =======================================================================
     """
-    pass
+    # plancks constant times speed of light in kev A
+    hc      = 12.39841984 
+    theta   = np.arcsin(q * hc / 4.0 / np.pi / E)
 
 def calc_q_from_theta(theta, E):
     """
@@ -386,14 +438,19 @@ def calc_q_from_theta(theta, E):
     >> @AUTHOR: Saransh Singh Lawrence Livermore national Lab
     >> @DETAIL: converts q to theta given an energy
 
-    >> @param   theta scattering angle
+    >> @param   theta scattering angle (in radians)
     >> @param   E  assumed energy of xray beam in keV
 
     >> @return  q array which converts scattering angle to scattering 
-                parameter q
+                parameter (in A^-1)
+                q = 4 * pi * sin(theta) / lambda = 4 * pi * sin(theta) * E / hc
     =======================================================================
     """
-    pass
+    # plancks constant times speed of light in kev A
+    hc      = 12.39841984 
+    q       = 4.0 * np.pi * np.sin(theta) * E / hc
+    return q
+
 
 def calc_weighted_delE(pinkbeam_spectrum):
     """
@@ -409,9 +466,44 @@ def calc_weighted_delE(pinkbeam_spectrum):
     >> @return  Emax maximum energy in the spectrum
     =======================================================================
     """
-    pass
+    ''' 
+        get data and normalize
+    '''
+    E, flux = pinkbeam_spectrum.data
+    ww      = flux / simps(flux)
 
-def calc_dsincx_dx(r, q):
+    '''
+        extract energy with peak flux and calculate the averages
+    '''
+    amax = np.argmax(flux)
+    Emax = E[amax]
+
+    dE   = E - Emax
+    delE = np.average(dE, weights=ww) 
+
+    return delE, Emax
+
+def calc_sinqroq(r, q):
+    """
+    =======================================================================
+    >> @DATE:   02/07/2020  SS 1.0 original
+    >> @AUTHOR: Saransh Singh Lawrence Livermore national Lab
+    >> @DETAIL: this function evaluates the sin(qr)/q function
+                encodes analytical result
+
+    >> @param   r distance in real space
+    >> @param   q distance in reciprocal space 
+
+    >> @return  sin(qr)/q
+    =======================================================================
+    """
+    eps = 1e-8
+    if(np.abs(q) < eps):
+        return r
+
+    return np.sin(q*r) / q
+
+def calc_dsincqr_dq(r, q):
     """
     =======================================================================
     >> @DATE:   02/06/2020  SS 1.0 original
@@ -422,7 +514,7 @@ def calc_dsincx_dx(r, q):
     >> @param   r distance in real space
     >> @param   q distance in reciprocal space 
 
-    >> @return  d(sinc(r*q)) / dq
+    >> @return  d(sin(r*q) / q) / dq = [qr*cos(qr) - sin(qr)]/q^2
     =======================================================================
     """
     eps = 1e-8
@@ -433,10 +525,37 @@ def calc_dsincx_dx(r, q):
         return 0.0
 
     x = q * r
-    return ( x * np.cos(x) - np.sin(x) ) / (q * x)
+    return ( x * np.cos(x) - np.sin(x) ) / (q *q )
 
 
-def calc_pbcorrection(sample_pattern, pinkbeam_spectrum, composition):
+def calc_dIcoh_dE(composition, Fr, r, q, E):
+    """
+    =======================================================================
+    >> @DATE:   02/06/2020  SS 1.0 original
+    >> @AUTHOR: Saransh Singh Lawrence Livermore national Lab
+    >> @DETAIL: calculates derivative of the coherent intensity with energy
+
+    >> @param   composition
+    >> @param   Fr = 4 * pi * r * (rho - rho_0)
+
+    >> @return  theta array which converts q to scattering angle
+    =======================================================================
+    """
+    pre = 2.0 * q / E
+
+    t1  = calc_sum_of_product_scattering_factors_derivatives(composition, q) 
+    t2  = calc_product_of_sum_scattering_factors_derivatives(composition, q)
+    f_mean_sq = calculate_f_mean_squared(composition, q)
+
+    integral1 = np.array([simps(Fr * calc_sinqroq(r, qq), r) for qq in q])
+    integral2 = np.array([simps(Fr * calc_dsincqr_dq(r, qq), r) for qq in q])
+
+    res = pre * (t1 + t2 * integral1 + f_mean_sq * integral2)
+
+    return res
+
+def calc_pbcorrection(sample_pattern, pinkbeam_spectrum, composition,
+                      density, r=None, use_modification_fcn=False):
     """
     =======================================================================
     >> @DATE:   02/06/2020  SS 1.0 original
@@ -453,4 +572,19 @@ def calc_pbcorrection(sample_pattern, pinkbeam_spectrum, composition):
     >> @return  sample_pattern (input) is updated with corrected data
     =======================================================================
     """
-    pass
+    q, intensity = sample_pattern.data
+    delE, Emax = calc_weighted_delE(pinkbeam_spectrum)
+
+    sq_pattern = calculate_sq(sample_pattern, 
+                            density, 
+                            composition, 
+                            attenuation_factor=0.001, 
+                            method='FZ',
+                            normalization_method='int',
+                            use_incoherent_scattering=True)
+
+    Fr = calculate_fr(sq_pattern, r=r, use_modification_fcn=use_modification_fcn, method='integral')
+    q, fr = Fr.data
+    intensity_correction = calc_dIcoh_dE(composition, fr, r, q, Emax)
+    intensity_corrected = intensity - delE * intensity_correction
+    sample_pattern = Pattern(q, intensity_corrected)

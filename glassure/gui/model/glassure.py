@@ -674,4 +674,7 @@ class GlassureModel(QtCore.QObject):
     def apply_pinkbeam_correction(self, sample_pattern):
         calc_pbcorrection(sample_pattern, 
                      self.pinkbeam_spectrum, 
-                     self.composition)
+                     self.composition,
+                     self.density,
+                     r=np.arange(self.r_min, self.r_max + self.r_step * 0.5, self.r_step),
+                     use_modification_fcn=self.use_modification_fcn)
