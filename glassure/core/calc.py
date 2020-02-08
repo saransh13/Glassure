@@ -2,7 +2,6 @@
 
 import numpy as np
 import lmfit
-from scipy.integrate import simps
 
 from . import Pattern
 from .utility import calculate_incoherent_scattering, calculate_f_squared_mean, \
@@ -470,7 +469,7 @@ def calc_weighted_delE(pinkbeam_spectrum):
         get data and normalize
     '''
     E, flux = pinkbeam_spectrum.data
-    ww      = flux / simps(flux)
+    ww      = flux / np.trapz(flux)
 
     '''
         extract energy with peak flux and calculate the averages
@@ -547,8 +546,8 @@ def calc_dIcoh_dE(composition, Fr, r, q, E):
     t2  = calc_product_of_sum_scattering_factors_derivatives(composition, q)
     f_mean_sq = calculate_f_mean_squared(composition, q)
 
-    integral1 = np.array([simps(Fr * calc_sinqroq(r, qq), r) for qq in q])
-    integral2 = np.array([simps(Fr * calc_dsincqr_dq(r, qq), r) for qq in q])
+    integral1 = np.array([np.trapz(Fr * calc_sinqroq(r, qq), r) for qq in q])
+    integral2 = np.array([np.trapz(Fr * calc_dsincqr_dq(r, qq), r) for qq in q])
 
     res = pre * (t1 + t2 * integral1 + f_mean_sq * integral2)
 
@@ -575,16 +574,32 @@ def calc_pbcorrection(sample_pattern, pinkbeam_spectrum, composition,
     q, intensity = sample_pattern.data
     delE, Emax = calc_weighted_delE(pinkbeam_spectrum)
 
+    attenuation_factor = 0.001
+
     sq_pattern = calculate_sq(sample_pattern, 
                             density, 
                             composition, 
-                            attenuation_factor=0.001, 
+                            attenuation_factor=attenuation_factor, 
                             method='FZ',
                             normalization_method='int',
                             use_incoherent_scattering=True)
 
+    f_squared_mean        = calculate_f_squared_mean(composition, q)
+    f_mean_squared        = calculate_f_mean_squared(composition, q)
+    atomic_density        = convert_density_to_atoms_per_cubic_angstrom(composition, density)
+    incoherent_scattering = calculate_incoherent_scattering(composition, q)
+
+    normalization_factor  = calculate_normalization_factor_raw(sample_pattern,
+                                                              atomic_density,
+                                                              f_squared_mean,
+                                                              f_mean_squared,
+                                                              incoherent_scattering,
+                                                              attenuation_factor)
+
     Fr = calculate_fr(sq_pattern, r=r, use_modification_fcn=use_modification_fcn, method='integral')
-    q, fr = Fr.data
-    intensity_correction = calc_dIcoh_dE(composition, fr, r, q, Emax)
-    intensity_corrected = intensity - delE * intensity_correction
+    r, fr = Fr.data
+    
+    intensity_coherent_correction = calc_dIcoh_dE(composition, fr, r, q, Emax) * normalization_factor
+    intensity_corrected  = intensity - delE * intensity_coherent_correction
+
     sample_pattern = Pattern(q, intensity_corrected)
