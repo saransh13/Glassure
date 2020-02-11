@@ -386,7 +386,7 @@ def calc_sum_of_product_scattering_factors_derivatives(composition, q):
     norm_elemental_abundances = normalize_composition(composition)
     res = 0
     for key, value in norm_elemental_abundances.items():
-        res += value * calculate_coherent_scattering_factor_derivative(key, q) * \
+        res += value**2 * calculate_coherent_scattering_factor_derivative(key, q) * \
                calculate_coherent_scattering_factor(key, q)
     return res
 
@@ -408,7 +408,7 @@ def calc_product_of_sum_scattering_factors_derivatives(composition, q):
     res_f  = 0
     res_df = 0
     for key, value in norm_elemental_abundances.items():
-        res_df += calculate_coherent_scattering_factor_derivative(key, q) 
+        res_df += value * calculate_coherent_scattering_factor_derivative(key, q) 
         res_f  += value * calculate_coherent_scattering_factor(key, q)
     return res_f * res_df
 
@@ -500,7 +500,7 @@ def calc_sinqroq(r, q):
     if(np.abs(q) < eps):
         return r
 
-    return np.sin(q*r) / q
+    return np.sin(q*r) / q 
 
 def calc_dsincqr_dq(r, q):
     """
@@ -518,10 +518,7 @@ def calc_dsincqr_dq(r, q):
     """
     eps = 1e-8
     if(np.abs(q) < eps):
-        return 0.0
-
-    if(np.abs(q) < eps):
-        return 0.0
+        return np.zeros_like(r)
 
     x = q * r
     return ( x * np.cos(x) - np.sin(x) ) / (q *q )
@@ -540,7 +537,7 @@ def calc_dIcoh_dE(composition, Fr, r, q, E):
     >> @return  theta array which converts q to scattering angle
     =======================================================================
     """
-    pre = 2.0 * q / E
+    pre = q / E
 
     t1  = calc_sum_of_product_scattering_factors_derivatives(composition, q) 
     t2  = calc_product_of_sum_scattering_factors_derivatives(composition, q)
@@ -549,7 +546,7 @@ def calc_dIcoh_dE(composition, Fr, r, q, E):
     integral1 = np.array([np.trapz(Fr * calc_sinqroq(r, qq), r) for qq in q])
     integral2 = np.array([np.trapz(Fr * calc_dsincqr_dq(r, qq), r) for qq in q])
 
-    res = pre * (t1 + t2 * integral1 + f_mean_sq * integral2)
+    res = pre * (2.0 * t1 + 2.0 * t2 * integral1 + f_mean_sq * integral2)
 
     return res
 
@@ -599,7 +596,7 @@ def calc_pbcorrection(sample_pattern, pinkbeam_spectrum, composition,
     Fr = calculate_fr(sq_pattern, r=r, use_modification_fcn=use_modification_fcn, method='integral')
     r, fr = Fr.data
     
-    intensity_coherent_correction = calc_dIcoh_dE(composition, fr, r, q, Emax) * normalization_factor
+    intensity_coherent_correction = calc_dIcoh_dE(composition, fr, r, q, Emax) #/ normalization_factor
     intensity_corrected  = intensity - delE * intensity_coherent_correction
 
     sample_pattern = Pattern(q, intensity_corrected)
